@@ -1,0 +1,6 @@
+django
+python-nmap
+pillow
+netifaces
+influxdb
+ipaddress

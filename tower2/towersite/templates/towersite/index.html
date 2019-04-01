@@ -1,0 +1,294 @@
+<!doctype html>
+{% load static %}
+<html>
+<head>
+  <title>Network | Circular images</title>
+
+  <style type="text/css">
+    body {
+      font: 10pt arial;
+    }
+
+    #mynetwork {
+      width: 80%;
+      height: 100vh;
+      float: left;
+      border: solid lightgray;
+      background-color:#ffffff;
+      display: inline-block;
+    }
+
+    #status {
+      width: 19%;
+      height: 100%;
+      float: right;
+      display: inline-block;
+    }
+
+    .dot {
+      height: 25px;
+      width: 25px;
+      border-radius: 50%;
+      display: inline-block;
+      margin: auto;
+    }
+    
+    .green {
+      background-color: #008000;
+    }
+
+    .red {
+      background-color: #FF0000;
+    }
+
+    table {
+      width: 100%;
+      table-layout: fixed;
+    }
+
+    .seventy {
+      width: 70%;
+    }
+
+    .thirty {
+      width: 30%;
+    }
+  </style>
+
+  <script type="text/javascript" src="https://ajax.googleapis.com/ajax/libs/jquery/1.10.1/jquery.js"></script>
+  <script type="text/javascript" src="{% static 'js/vis.min.js' %}"></script>
+  <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css" integrity="sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T" crossorigin="anonymous">
+  <link href="{% static 'css/vis.min.css' %}" rel="stylesheet" type="text/css" />
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.7/umd/popper.min.js" integrity="sha384-UO2eT0CpHqdSJQ6hJty5KVphtPhzWj9WO1clHTMGa3JDZwrnQq4sF86dIHNDz0W1" crossorigin="anonymous"></script>
+  <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.min.js" integrity="sha384-JjSmVgyd0p3pXB1rRibZUAYoIIy6OrQ6VrjIEaFf/nJGzIxFDsf4x0xIM+B07jRM" crossorigin="anonymous"></script>
+
+  <script type="text/javascript"> 
+    var DIR = 'img/soft-scraps-icons/';
+
+    var nodes = new vis.DataSet();
+    var edges = new vis.DataSet();
+    var network = null;
+    var upHost = null;
+    var sshHost = null;
+    var chrHost = null;
+    var kafkaHost = null;
+    var init = false;
+
+    $(document).ready(function() {
+      $("#status_content").hide();
+      $("#ssh_button").click(function() {
+        $(".modal").show();
+      });
+
+      $(".close").click(function() {
+        $(".modal").hide();
+      });
+
+      // create a network
+      var container = document.getElementById('mynetwork');
+      var data = {
+        nodes: nodes,
+        edges: edges
+      };
+
+      var options = {
+        autoResize: true,
+        nodes: {
+          borderWidth:4,
+          size:30,
+          color: {
+            border: '#222222',
+            background: '#666666'
+          },
+          font:{color:'#000000'}
+        },
+        edges: {
+          color: 'lightgray'
+        },
+        width: '100%',
+        height: '100%'
+      };
+
+      network = new vis.Network(container, data, options);
+
+      network.on('select', function(params) {
+        if (params.nodes.length > 0) {
+          var node = nodes.get(params.nodes)[0];
+          $(document).find("#status_header").html(node['label']);
+          $(document).find("#status_content").show();
+
+	  if (upHost !== null) {
+            if (upHost.includes(node['ip'])) {
+              $(document).find("#netconnlight").removeClass("red");
+	      $(document).find("#netconnlight").addClass("green");
+	    } else {
+              $(document).find("#netconnlight").removeClass("green");
+	      $(document).find("#netconnlight").addClass("red");
+            }
+          } else {
+            //Nothing is done.
+          }
+          
+	  if (sshHost !== null) {
+            if (sshHost.includes(node['ip'])) {
+              $(document).find("#sshconnlight").removeClass("red");
+	      $(document).find("#sshconnlight").addClass("green");
+	    } else {
+              $(document).find("#sshconnlight").removeClass("green");
+	      $(document).find("#sshconnlight").addClass("red");
+            }
+          } else {
+            //Nothing is done.
+          }
+
+	  if (chrHost !== null) {
+            if (chrHost.includes(node['ip'])) {
+              $(document).find("#chronoconnlight").removeClass("red");
+	      $(document).find("#chronoconnlight").addClass("green");
+              $(document).find("#chr_button").unbind().click(function() {
+                $(document).find("#chr_button").prop("disabled", true);
+                window.open("http://" + node['ip'] + ":8888");
+                $(document).find("#chr_button").prop("disabled", false);
+                return false;
+              });
+              $(document).find("#chr_button").show();
+	    } else {
+              $(document).find("#chronoconnlight").removeClass("green");
+	      $(document).find("#chronoconnlight").addClass("red");
+              $(document).find("#chr_button").hide();
+            }
+          } else {
+            //Nothing is done.
+          }
+
+	  if (kafkaHost !== null) {
+            if (kafkaHost.includes(node['ip'])) {
+              $(document).find("#kafkaconnlight").removeClass("red");
+	      $(document).find("#kafkaconnlight").addClass("green");
+	    } else {
+              $(document).find("#kafkaconnlight").removeClass("green");
+	      $(document).find("#kafkaconnlight").addClass("red");
+            }
+          } else {
+            //Nothing is done.
+          }
+        } else {
+          $(document).find("#status_content").hide();
+        }
+      });
+
+      setInterval("checkUP()", 5000);
+      setInterval("checkStat()", 5000);
+    });
+
+    function checkUP() {
+        $.ajax({
+          url : '/getUpdate',
+          type : 'GET',
+          dataType: 'json',
+          success: function(jsonData) {
+            var data = JSON.parse(jsonData)
+            upHost = data['upHost'];
+            sshHost = data['sshHost'];
+            chrHost = data['chrHost'];
+            kafkaHost = data['kafkaHost'];
+            init = true;
+          }
+        });
+    }
+
+    function checkStat() {
+      $.ajax({
+        url : '/getStatus',
+        type : 'GET',
+        dataType: 'json',
+        success: function(jsonData) {
+          var data = JSON.parse(jsonData)
+          
+          data['nodes'].forEach(function(node) {
+            if (nodes.get(node['id']) === null) {
+              nodes.add(node);
+            }
+          });
+
+          data['edges'].forEach(function(edge) {
+            if (edges.get(edge['id']) === null) {
+              edges.add(edge);
+            }
+          });         
+        }
+      });
+    }
+
+    // Called when the Visualization API is loaded.
+    function draw() {
+      // create connections between people
+      // value corresponds with the amount of contact between two people
+      /* edges = [
+        {from: 1, to: 2},
+        {from: 2, to: 3},
+        {from: 2, to: 4},
+      ]; */
+
+      checkUP();
+      checkStat();
+    }
+  </script>
+  
+</head>
+
+  <body onload="draw()">
+    <div id="entirebox">
+      <div class="modal" tabindex="-1" role="dialog">
+        <div class="modal-dialog" role="document">
+          <div class="modal-content">
+            <div class="modal-header">
+              <h5 class="modal-title">Modal title</h5>
+              <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                <span aria-hidden="true">&times;</span>
+              </button>
+            </div>
+            <div class="modal-body">
+              
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div id="mynetwork"></div>
+      <div id="status">
+        <div id="status_content">
+          <div id="status_header"></div>
+          <div id="status_greenlight">
+            <table>
+              <colgroup>
+                <col class="seventy"></col>
+                <col class="thirty"></col>
+              </colgroup>
+              <tr>
+                <td>Network Connection Status : </td>
+                <td><span class="dot" id="netconnlight"></span></td>
+              </tr>
+              <tr>
+                <td>SSH Availability Status : </td>
+                <td><span class="dot" id="sshconnlight"></span></td>
+              </tr>
+              <tr>
+                <td>Chronograf Dashboard Status : </td>
+                <td><span class="dot" id="chronoconnlight"></span></td>
+              </tr>
+              <tr>
+                <td>Kafka Zookeeper Status : </td>
+                <td><span class="dot" id="kafkaconnlight"></span></td>
+              </tr>
+            </table>
+            <button type="button" class="btn btn-primary" id="chr_button">OPEN CHRONOGRAF</button>
+          </div>
+          <div id="status_access">
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </body>
+</html>

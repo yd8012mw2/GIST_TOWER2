@@ -1,0 +1,88 @@
+	<div id="terminal"></div>
+	<div id="settingsNav" class="sidenav" style="width:0;">
+		<a href="javascript:;" class="closebtn" onclick="toggleNav(0)">&times;</a>
+		<span class="title large">Terminal Options</span>
+		<hr>
+		<span class="title" style="padding-top:20px">Font Size</span>
+		<a class="leftarrow" href="javascript:;" onclick="settings.modFontSize(-1)"><--</a>
+		<span class="middle" id="currentFontSize">16px</span>
+		<a class="rightarrow" href="javascript:;" onclick="settings.modFontSize(1)">--></a>
+		<span class="title" style="padding-top:40px">Terminal Size</span>
+		<span class="leftarrow">Cols:
+			<input type="number" id="termCols" oninput="settings.modTerm(0, this.value)">
+		</span>
+		<span class="rightarrow">Rows:
+			<input type="number" id="termRows" oninput="settings.modTerm(1, this.value)">
+		</span>
+		<span class="title" style="padding-top:60px;">Local Echo</span>
+		<a class="leftarrow" href="javascript:;" onclick="settings.setLocalEcho(-1)"><--</a>
+		<a class="rightarrow" href="javascript:;" onclick="settings.setLocalEcho(1)">--></a>
+		<div class="fileUpload btn btn-primary nomargin">
+			<span class="tooltiptext" style="visibility:hidden;" id="autoEchoState">State: Disabled</span>
+			<span class="middle" id="currentLEcho">Force Off</span>
+		</div>
+		<span class="title" style="padding-top:50px">Colours</span>
+		<a class="leftarrow" href="javascript:;" onclick="settings.cycleColorSchemes(0)"><--</a>
+		<span class="middle" id="currentColor">Monokai</span>
+		<a class="rightarrow" href="javascript:;" onclick="settings.cycleColorSchemes(1)">--></a>
+		<div class="fileUpload btn btn-primary">
+			<span class="tooltiptext">Format: Xresources</span>
+			<span class="middle" style="width:220px;">Upload</span>
+			<input type="file" title=" " id="Xresources" class="upload" onchange="settings.importXresources()" />
+		</div>
+		<span class="title" style="padding-top:20px;">Keep Alive</span>
+		<div class="fileUpload btn btn-primary">
+			<span class="tooltiptext">0 to disable</span>
+			<input type="number" class="large" id="keepAlive" onchange="settings.setKeepAlive(this.value);" placeholder="0">
+			<span style="font-size:16px;"> seconds</span>
+		</div>
+		<span class="title" style="padding-top:20px;">Network Traffic</span>
+		<div class="netTraffic">
+			<span class="leftarrow brightgreen">rx: <span id="rxTraffic">0Bytes</span></span>
+			<span class="rightarrow brightyellow">tx: <span id="txTraffic">0Bytes</span></span>
+		</div>
+		<div id="hostKey">
+			<span class="title" style="padding-top:20px;">Host Key</span>
+			<span id="hostKeyImg" class="hostKeyImg"></span>
+		</div>
+		<span class="footer">
+			<span class="title">Websocket Proxy</span>
+			<div class="fileUpload btn btn-primary">
+				<span class="tooltiptext">Websocket Proxy URL</span>
+				<input type="text" class="large" id="websockURL" onchange="modProxyURL(this.value)">
+			</div>
+		</span>
+	</div>
+	<span id="gear" class="gear" style="visibility:visible;" onclick="toggleNav(250)">&#9881</span>
+
+	<div id="login_cred" class="modal">
+		<div class="modal-content">
+			<div class="modal-header">
+				<h2><span class="icon-lock"></span> SSHv2 Login</h2>
+			</div>
+			<div class="modal-body">
+				<table style="width: 100%">
+					<tr>
+						<td><span class="icon-address-book"></span> IP Address:</td>
+						<td><input type="text" id="ipaddress" placeholder="sshy.us(:22)" style="width: 90%" onblur="validate(this.id, this.value)" autofocus></td>
+					</tr>
+					<tr>
+						<td><span class="icon-user-circle-o"></span> Username:</td>
+						<td><input type="text" id="username" placeholder="username" style="width: 90%" onblur="validate(this.id, this.value)"></td>
+					</tr>
+					<tr>
+						<td><span class="icon-eye"></span> Password:</td>
+						<td><input type="password" id="password" style="width: 90%" onblur="validate(this.id, this.value)"></td>
+					</tr>
+				</table>
+				<i id="failure" class="failure"></i>
+				<input type="button" id="connect" class="button" value="Connect" onclick="startSSHy()">
+			</div>
+		</div>
+		<div id="load-container" class="load-container">
+			<svg id="load" x="0px" y="0px" viewBox="0 0 150 150">
+		  		<circle id="loading-inner" cx="75" cy="75" r="60"></circle>
+			</svg>
+		</div>
+	</div>
+
