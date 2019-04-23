@@ -41,6 +41,9 @@
       background-color: #FF0000;
     }
 
+    .redText {
+      color: #FF0000;
+    }
     table {
       width: 100%;
       table-layout: fixed;
@@ -69,6 +72,9 @@
     var edges = new vis.DataSet();
     var network = null;
     var upHost = null;
+    var redHost = null;
+    var greenHost = null;
+    var yellowHost = null;
     var sshHost = null;
     var chrHost = null;
     var kafkaHost = null;
@@ -177,8 +183,9 @@
         }
       });
 
-      setInterval("checkUP()", 5000);
-      setInterval("checkStat()", 5000);
+      setInterval("checkUP()", 2000);
+      setInterval("checkStat()", 2000);
+      setInterval("checkSSH()", 1000);
     });
 
     function checkUP() {
@@ -191,6 +198,9 @@
             upHost = data['upHost'];
             sshHost = data['sshHost'];
             chrHost = data['chrHost'];
+            greenHost = data['greenHost'];
+            yellowHost = data['yellowHost'];
+            redHost = data['redHost'];
             kafkaHost = data['kafkaHost'];
             init = true;
           }
@@ -209,6 +219,47 @@
             if (nodes.get(node['id']) === null) {
               nodes.add(node);
             }
+
+            if (nodes.get(node['id']) !== null) {
+              var selectedNode = nodes.get(node['id']);
+	      if (upHost !== null) {  
+                if (upHost.includes(node['ip'])) {
+                  if (greenHost.includes(node['ip'])) {
+                    selectedNode.color = {
+                      border: '#222222',
+                      background: '#00FF00'
+                    }                  
+                  } else if (yellowHost.includes(node['ip'])) {
+                    selectedNode.color = {
+                      border: '#222222',
+                      background: '#FFFF00'
+                    }   
+                  } else if (redHost.includes(node['ip'])) {
+                    selectedNode.color = {
+                      border: '#222222',
+                      background: '#FF0000'
+                    }  
+                  } else {
+                    selectedNode.color = {
+                      border: '#222222',
+                      background: '#0000FF'
+                    }  
+                  }
+                } else {
+                  selectedNode.color = {
+                    border: '#222222',
+                    background: '#666666'
+                  }
+                }
+              } else {
+                  selectedNode.color = {
+                    border: '#222222',
+                    background: '#666666'
+                  }
+              }
+
+              nodes.update(selectedNode);
+            }
           });
 
           data['edges'].forEach(function(edge) {
@@ -216,6 +267,31 @@
               edges.add(edge);
             }
           });         
+        }
+      });
+    }
+
+    function checkSSH() {
+      $.ajax({
+        url : '/getSSH',
+        type : 'GET',
+        dataType: 'json',
+        success: function(jsonData) {
+          var data = JSON.parse(jsonData);
+          $("#ssh_table > tbody:last > tr").remove();
+
+          data.forEach(function(dat) {
+            if (dat["access"] === true) {
+              var str = "<tr>" + "<td>" + dat['ip'] + "</td>" 
+                               + "<td>" + dat["access"] + "</td>" 
+                               + "<td>" + dat["time"] + "</td>" + "</tr>";
+            } else {
+              var str = "<tr>" + '<td class="redText">' + dat['ip'] + "</td>" 
+                               + '<td class="redText">' + dat["access"] + "</td>" 
+                               + '<td class="redText">' + dat["time"] + "</td>" + "</tr>";
+            }
+            $("#ssh_table > tbody:last").append(str);
+          });
         }
       });
     }
@@ -257,6 +333,20 @@
 
       <div id="mynetwork"></div>
       <div id="status">
+        <div id="ssh_status">
+          SSH LOG
+          <table id="ssh_table">
+            <thead>
+              <tr>
+                <th>IP</th>
+                <th>FAIL</th>
+                <th>TIME</th>
+              </tr>
+            </thead>
+	    <tbody></tbody>
+          </table>
+          <br><br><br>
+        </div>
         <div id="status_content">
           <div id="status_header"></div>
           <div id="status_greenlight">

@@ -6,7 +6,6 @@ from influxdb import InfluxDBClient
 
 ip_main = "192.168.1.2"
 def getUpdate(self):
-
   #myIPlist = []
   #myNetworklist = []
   #upHost = []
@@ -29,9 +28,13 @@ def getUpdate(self):
 
   nodes = []
   upHost = []
+  upHostStat = {}
   sshHost = []
   chrHost = []
   kafkaHost = []
+  redHost = []
+  yellowHost = []
+  greenHost = []
 
   # 1
   try:
@@ -56,7 +59,8 @@ def getUpdate(self):
     print(e)
 
   # 2
-  for node in nodes:
+  # Hierarchial Support....
+  """for node in nodes:
     try:
       client = InfluxDBClient(node.ip, "8086", "Labs")
       result = client.query('SELECT distinct("ip") from "Labs"."autogen"."labs"')
@@ -74,7 +78,7 @@ def getUpdate(self):
           Node.objects.create(ip=data[cnt], pNode=Node.objects.get(ip=node.ip))
 
     except Exception as e:
-      print(e)
+      print(e)"""
   
   #3
   for node in Node.objects.all():
@@ -98,21 +102,61 @@ def getUpdate(self):
           if nm[ip]['tcp'][8888]['state'] == 'open':
             chrHost.append(ip)
             
-  #if (len(myNetworklist) > 0):
-  #  nm = nmap.PortScanner()
-  #  nm.scan(hosts=myNetworklist[0], arguments='-sP')
-  #  hosts_list = [(x, nm[x]['status']['state']) for x in nm.all_hosts()]
+  #4
+  try:
+    client = InfluxDBClient("localhost", "8086", "Labs")
+    result = client.query('SELECT "cpu", "ip" FROM "Labs"."autogen"."labs" WHERE time <= now() And time >= now() - 5s order by time desc')
 
-  #  for hosts, status in hosts_list:
-  #    if status == "up":
-  #      upHost.append(hosts)
+    cpuUsage = {}
+    for data in result.raw['series']:
+      for i in range(len(data['values'])):
+        ip = ""
+        cpu = ""
+        for column, value in zip(data['columns'], data['values'][i]):
+          if column == 'ip':
+            ip = value
+          if column == 'cpu':
+            cpu = value
+        if ip not in cpuUsage:
+          cpuUsage[ip] = cpu
 
-  #      if len(Node.objects.filter(ip=hosts)) == 0:
-  #        print("Node create @", hosts)
-  #        Node.objects.create(ip=hosts)
+    for key, val in cpuUsage.items():
+      if val <= 0.5:
+        greenHost.append(key)
+      elif val <= 0.9:
+        yellowHost.append(key)
+      else:
+        redHost.append(key)
+  except Exception as e:
+    print(e)
 
-  return JsonResponse(json.dumps({"upHost": upHost, "sshHost": sshHost, "chrHost": chrHost, "kafkaHost": kafkaHost}), safe=False)
+  return JsonResponse(json.dumps({"upHost": upHost, "sshHost": sshHost, "chrHost": chrHost, "kafkaHost": kafkaHost, "greenHost": greenHost, "yellowHost": yellowHost, "redHost": redHost}), safe=False)
 
+def getSSH(self):
+  results = []
+  try:
+    client = InfluxDBClient("localhost", "8086", "ssh")
+    result = client.query('SELECT * FROM "ssh"."autogen"."ssh" order by time desc limit 5')
+
+    for data in result.raw['series']:
+      for i in range(len(data['values'])):
+        ip = ""
+        success = ""
+        time = ""
+        for column, value in zip(data['columns'], data['values'][i]):
+          if column == 'time':
+            time = value
+          if column == 'tried':
+            ip = value
+          elif column == 'success':
+            success = value
+
+        results.append({"ip" : ip, "access" : success, "time" : time})
+
+  except Exception as e:
+    print(e)
+
+  return JsonResponse(json.dumps(results), safe=False)
 
 def getStatus(self):
   nodes = []
